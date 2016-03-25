@@ -3,9 +3,7 @@ var dewRcon;
 var dewRconConnected = false;
 jQuery(function() {
     StartRconConnection();
-    if (!dewRconConnected) {
-        setTimeout(StartRconConnection, 2000);
-    }
+    
 });
 StartRconConnection = function() {
     dewRcon = new dewRconHelper();
