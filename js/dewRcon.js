@@ -26,7 +26,10 @@ StartRconConnection = function() {
         //We can display the latest messages from dew using the code below
         console.log(message.data);
 
-        myCodeMirror.replaceRange(message.data, CodeMirror.Pos(myCodeMirror.lastLine()));
+        myCodeMirror.replaceRange('\n' + message.data, CodeMirror.Pos(myCodeMirror.lastLine()));
+		
+		 myCodeMirror.scrollTo(0, myCodeMirror.getScrollInfo().height);
+		
     };
 }
 dewRconHelper = function() {

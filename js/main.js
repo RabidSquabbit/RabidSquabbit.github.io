@@ -1,6 +1,6 @@
 var myCodeMirror;
 jQuery(function() {
-    myCodeMirror = CodeMirror.fromTextArea(rconConsole);
+    myCodeMirror = CodeMirror.fromTextArea(rconConsole, {readOnly: true} );
 
 $(document).keypress(function(e) {
   if(e.which == 13) {
