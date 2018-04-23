@@ -19,6 +19,7 @@ let refreshVersion = 0;
 let inflightRequests = [];
 let refreshing = false;
 let visible = false;
+let serverPingInterval = null;
 
 
 let serverListWidget = dew.makeListWidget(document.querySelector('#server-list-wrap'), {
@@ -188,6 +189,8 @@ function onRefreshStarted() {
     refreshButton.classList.add('refreshing');
     refreshLegendLink.innerHTML = 'Stop';
     refreshing = true;
+    if(!serverPingInterval)
+        serverPingInterval = setInterval(serverPingProc, 25);
 }
 
 
@@ -197,9 +200,11 @@ function onRefreshEnded() {
     refreshButton.classList.remove('refreshing');
     refreshLegendLink.innerHTML = 'Refresh';
     refreshing = false;
+    clearInterval(serverPingInterval);
+    serverPingInterval = null;
 }
 
-setInterval(function () {
+function serverPingProc() {
     if (!pingQueue.length)
         return;
     var serverInfo = pingQueue.pop();
@@ -218,7 +223,7 @@ setInterval(function () {
         if(refreshVersion != serverInfo.refreshVersion)
             return;  
     });
-}, 25);
+}
 
 
 function ping(info) {
