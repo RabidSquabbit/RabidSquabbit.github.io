@@ -133,6 +133,8 @@ function closeBrowser() {
 }
 
 function cancelRefresh() {
+    pingQueue = [];
+    pingCounter = 0;
     while(inflightRequests.length) {
         let request = inflightRequests.pop();
         request.abort();
@@ -148,9 +150,7 @@ function refresh() {
     model.playerCount = 0;
     model.serverCount = 0;
     officialServers = {};
-    pingQueue = [];
-    pingCounter = 0;
-    
+  
     onRefreshStarted();
     render();
 
@@ -239,7 +239,7 @@ function ping(info) {
             let officialStatus = officialServers[info.server];
 
             resolve({
-                type: data.passworded ? 'private' : (officialStatus ? (officialStatus.ranked ? 'ranked' : 'social') : ''),
+                type: data.passworded ? 'private' : (officialStatus ? (officialStatus.ranked ? 'ranked' : 'official') : ''),
                 ping: ping,
                 IP: info.server,
                 hostPlayer: data.hostPlayer,
