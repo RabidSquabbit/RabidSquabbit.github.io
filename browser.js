@@ -244,7 +244,7 @@ function ping(info) {
             let officialStatus = officialServers[info.server];
 
             resolve({
-                type: data.passworded ? 'private' : (officialStatus ? (officialStatus.ranked ? 'ranked' : 'social') : ''),
+                type: data.passworded ? 'private' : (officialStatus ? 'Official' : ''),
                 ping: ping,
                 IP: info.server,
                 hostPlayer: data.hostPlayer,
