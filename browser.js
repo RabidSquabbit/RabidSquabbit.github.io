@@ -519,6 +519,9 @@ function render() {
 }
 
 function sanitize(str) {
+    if(!str)
+        return 'Blam!';
+
     if(str.length > 80)
         str = str.substr(0, 80) + '...';
 
