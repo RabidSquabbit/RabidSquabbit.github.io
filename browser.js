@@ -239,7 +239,7 @@ function ping(info) {
             let officialStatus = officialServers[info.server];
 
             resolve({
-                type: data.passworded ? 'private' : (officialStatus ? (officialStatus.ranked ? 'ranked' : 'official') : ''),
+                type: data.passworded ? 'private' : (officialStatus ? (officialStatus.ranked ? 'ranked' : 'social') : ''),
                 ping: ping,
                 IP: info.server,
                 hostPlayer: data.hostPlayer,
