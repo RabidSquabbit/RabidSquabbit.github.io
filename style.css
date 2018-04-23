@@ -113,11 +113,15 @@ button#refresh.refreshing{
 
 .server-list td:nth-child(1) {
     text-transform: capitalize;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
-.server-list th {
-    padding: 15px;
+.server-list th, .server-list td {
+    padding: 15px 10px;
 }
+
 
 /*Server browser*/
 #server-list-wrap {
@@ -172,7 +176,7 @@ table.server-list thead tr{
 }
 /*Server List Item padding*/
 .server-list tbody tr td {
-    padding: 10px;
+    padding: 10px 10px;
 }
 /*Server List Item Hovering*/
 .server-list tbody tr.selected {
@@ -198,6 +202,7 @@ table.server-list thead tr{
     color: white;
     font-size: 24px;
     padding-left: var(--side-margin);
+    display:flex;
 }
 
 .page_footer.gamepad-only img {
@@ -208,10 +213,14 @@ table.server-list thead tr{
     float: left;
     vertical-align: sub;
     margin-right: 20px;
+    line-height:32px;
+    display:flex;
+    flex-direction:row;
+    align-items: center;
 }
 
 body[data-gamepad-enabled="true"] #server-list-wrap {
-    height: calc(100% - var(--header-top-height) - 120px);
+    height: calc(100% - var(--header-top-height) - 100px);
 }
 
 /* Let's get this party started */
@@ -255,6 +264,7 @@ body[data-gamepad-enabled="true"] #server-list-wrap {
     outline: 0;
     line-height: 1em;
     min-height: 0 !important;
+    opacity: 0.85;
 }
 
 .swal2-content{
@@ -269,6 +279,7 @@ body[data-gamepad-enabled="true"] #server-list-wrap {
 
 .swal2-actions {
     margin: 0 !important;
+    padding-top: 10px;
 }
 
 .swal2-title{
@@ -276,15 +287,16 @@ body[data-gamepad-enabled="true"] #server-list-wrap {
     width: 100%;
     top: 0px;
     left: 0px;
-    height: 40px;
-    line-height: 40px;
+    height: 45px;
+    line-height: 45px;
     color: white !important;
-    background-color: black;
+    background-color: #070e15;
     font-size: 20px;
     border-bottom: solid 1px rgba(91, 106, 133, 0.3); 
     margin-top: 0;
     text-align: center;
     font-weight: 700;
+    text-transform: uppercase !important;
 }
 
 .swal2-input{
@@ -305,7 +317,8 @@ body[data-gamepad-enabled="true"] #server-list-wrap {
     background-color: rgba(0,0,0,0) !important;
     color: white;
     float: left !important;
-    font-size: 24px !important;
+    font-size: 28px !important;
+    vertical-align: middle;
 }
 
 .alertButton:focus {
@@ -321,7 +334,9 @@ body[data-gamepad-enabled="true"] #server-list-wrap {
     width: 32px;
     margin-bottom: -4px;
     margin-right: 4px;
+    margin-top: -10px;
     vertical-align: inherit;
+    
 }
 
 #population {
@@ -352,6 +367,7 @@ body[data-gamepad-enabled="true"] #server-list-wrap {
     text-decoration: none;
     padding-top: 10px;
     padding-bottom:10px;
+    outline: none;
 }
 
 .playlist-tabs ul li a:hover {
@@ -360,4 +376,9 @@ body[data-gamepad-enabled="true"] #server-list-wrap {
 
 .playlist-tabs ul li a.active {
     color:white;
+    outline: none;
+}
+
+.server-list tbody tr.pinned {
+    color:yellow;
 }

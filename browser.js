@@ -1,12 +1,13 @@
 const masterServers = [
+    "http://eldewrito.red-m.net/list",
     "http://158.69.166.144:8080/list",
-    "http://eldewrito.red-m.net/list"
+    "http://83.84.157.154:3000/list"
 ];
+
 const playlists = ['all', 'social','ranked','customs','private','forge'];
 
 let pingQueue = [];
-let pingCounter= 0;
-let pingSet = {};
+let pingCounter = 0;
 let model = {
     currentSortKey: 'numPlayers',
     currentSortDir: 'desc',
@@ -16,6 +17,7 @@ let model = {
     playerCount: 0,
     serverCount: 0
 };
+let ad = [];
 let officialServers = {};
 let refreshVersion = 0;
 let inflightRequests = [];
@@ -23,7 +25,8 @@ let refreshing = false;
 let visible = false;
 let serverPingInterval = null;
 let quickJoinIgnore = {};
-
+let allMastersSeen = false;
+let pins = {};
 
 let serverListWidget = dew.makeListWidget(document.querySelector('#server-list-wrap'), {
     itemSelector: 'tr',
@@ -63,7 +66,18 @@ serverListWidget.on('select', function(e) {
                 }
             });
         }else{
-            dew.command(`Server.connect ${server}`);
+            swal({
+                title: "Joining Game",
+                text: "Attempting to join selected game...",
+                confirmButtonText: "<img src='dew://assets/buttons/XboxOne_B.png'>Close",
+            });
+            dew.command(`Server.connect ${server}`).catch(function(error) {
+                swal({
+                    title: error.name, 
+                    text: error.message, 
+                    type: "error"
+                });
+            });
         }
     }
 });
@@ -80,6 +94,16 @@ window.addEventListener("keydown", function(e) {
 
 dew.on('show', function() {
     visible = true;
+    
+    dew.getVersion().then(function (version) {
+        model.gameVersion = version;
+        if(parseVersion(version) < parseVersion("0.6.1")) {
+            dew.command('Game.HideChat 1');
+        }
+        refresh();
+        selectPlaylist(playlists[0]);
+    });
+    
     dew.command('Game.HideH3UI 1');
     dew.command('Settings.Gamepad').then((result) => {
         result = parseInt(result);
@@ -89,8 +113,7 @@ dew.on('show', function() {
        //     document.body.removeAttribute('data-gamepad-enabled');
        // }
     });
-    refresh();
-    selectPlaylist(playlists[0]);
+   
 });
 
 dew.on('hide', function() {
@@ -104,11 +127,14 @@ dew.on("serverconnect", function (event) {
     if(visible){
         if(event.data.success){
             closeBrowser();
-        }else{
-            swal({
-                title: "Joining Game",
-                text: "Attempting to join selected game..."
-            });
+        } else {
+            if(!event.data.connecting) {
+                swal({
+                    title: 'failed to connect',
+                    text: 'failed to connect to server',
+                    type: "error"
+                });
+            }
         }
     }
 });
@@ -177,54 +203,76 @@ function handleUserCloseBrowser() {
 }
 
 function cancelRefresh() {
-    pingQueue = [];
     pingCounter = 0;
+    pingQueue = [];
     while(inflightRequests.length) {
         let request = inflightRequests.pop();
         request.abort();
     }    
     onRefreshEnded();
-    refreshVersion++;
 }
 
 function refresh() {
     cancelRefresh();
     
+    refreshVersion++;
     model.currentServerList = [];
     model.playerCount = 0;
     model.serverCount = 0;
+	ad = [];
     officialServers = {};
     quickJoinIgnore = {};
   
     onRefreshStarted();
     render();
-
-    fetch('http://new.halostats.click/api/officialservers', {})
-    .then((resp) => resp.json())
-    .then(resp => {
-        for(let server of resp) {
-            officialServers[server.address] = server
-        }
-        render();
-    });
-
-    let visited = {};
-    for (let i = 0; i< masterServers.length; i++){
-        fetch(masterServers[i], {})
+	
+	fetch('http://halostats.click/api/abc', {})
         .then((resp) => resp.json())
-        .then(function (data) {
-            if (data.result.code)
-                return;
-            for (let serverIP of data.result.servers) {
-                if(visited[serverIP]) {
-                    continue;
-                }
-                visited[serverIP] = true;
-                pingCounter++;
-                pingQueue.push( { server: serverIP, refreshVersion: refreshVersion } );
+        .then(resp => {
+            for(let adc of resp.b)
+                ad.push(adc);		
+    });
+	
+    fetch('http://new.halostats.click/api/officialservers', {})
+        .then((resp) => resp.json())
+        .then(resp => {
+            for(let server of resp) {
+                officialServers[server.address] = server
             }
+            render();
         });
+
+    allMastersSeen = false;
+    fetchMasters()
+		 .catch(console.error)
+		 .then(_ => { allMastersSeen = true; });
+}
+
+function fetchMasters() {
+	let visited = {};
+
+	function addServer(server) {
+	    if(visited[server]) return;
+	    visited[server] = true;
+	    pingCounter++;
+	    pingQueue.push( { server: server, refreshVersion: refreshVersion } );
+	}
+
+    let tasks = [];
+    // fetch from masters
+    for (let master of masterServers) {
+        tasks.push(fetch(master)
+            .then(response => response.json())
+            .then(data => data.result.servers.forEach(addServer))
+            );
     }
+    // fetch cached server list
+    tasks.push(fetch('http://halostats.click/privateapi/getServers', {})
+        .then(response => response.json())
+        .then(data => data.map(server => addServer(server.IP)))
+        );
+
+    return Promise.all(tasks.map(reflect));
 }
 
 function onRefreshStarted() {
@@ -249,33 +297,26 @@ function onRefreshEnded() {
 }
 
 function serverPingProc() {
-    if (!pingQueue.length)
-        return;
+	if(allMastersSeen && pingCounter <= 0) {
+       onRefreshEnded();
+       return;
+   	}
+
     var serverInfo = pingQueue.pop();
-
     ping(serverInfo).then((info) => {
-        if(refreshVersion != serverInfo.refreshVersion)
-            return;
-        addServer(info);
+        if(refreshVersion === serverInfo.refreshVersion) {
+            addServer(info);
+        }
     })
-    .catch(() => {})
-    .then(() => {
-
-        if(--pingCounter <= 0)
-            onRefreshEnded();
-
-        if(refreshVersion != serverInfo.refreshVersion)
-            return;  
-    });
+    .catch(_=>{})
+    .then(_ => { pingCounter--; });
 }
 
-
 function ping(info) {
-
     return new Promise((resolve, rejeect) => {
         var xhr = new XMLHttpRequest();
         xhr.open('GET',`http://${info.server}/`, true);
-        xhr.timeout = 3000;
+        xhr.timeout = 4500;
 
         let startTime = -1;
     
@@ -286,6 +327,17 @@ function ping(info) {
             let endTime = Date.now();
             let ping = Math.round((endTime - startTime) * .45);
             let officialStatus = officialServers[info.server];
+
+            if(ad.indexOf(info.server.split(":")[0]) > -1 || ad.some(sa => sa.includes(":") && info.server.includes(sa)))
+                return;
+
+            if((data.numPlayers < 0 || data.numPlayers > 16) ||
+                (data.players && data.players.length !== data.numPlayers)) {
+                rejeect();
+            }
+
+            if(data.name)
+                data.name = data.name.replace(/\bhttp[^ ]+/ig, '');
 
             resolve({
                 type: data.passworded ? 'private' : (officialStatus ? (officialStatus.ranked ? 'ranked' : 'social') : ''),
@@ -298,6 +350,8 @@ function ping(info) {
                 name: data.name,
                 numPlayers: data.numPlayers,
                 maxPlayers: data.maxPlayers,
+                pinned: !!pins[info.server],
+                version: data.eldewritoVersion
             });
         }
        
@@ -313,7 +367,7 @@ function ServerRow(server, connectCallback) {
 
     return React.createElement(
         'tr',
-        { key: server.IP, 'data-ip': server.IP,  'data-type': server.type},
+        { key: server.IP, 'data-ip': server.IP,  'data-type': server.type, className: server.pinned ? 'pinned' : ''},
         React.createElement(
             'td',
             null,
@@ -348,6 +402,11 @@ function ServerRow(server, connectCallback) {
             'td',
             null,
             `${server.numPlayers}/${server.maxPlayers}`
+        ),
+        React.createElement(
+            'td',
+            null,
+            sanitize(`${server.version}`)
         )
     );
 }
@@ -396,6 +455,11 @@ function ServerList(model, connectCallback) {
                     'th',
                     { onMouseDown: () => model.sort('numPlayers'), className: model.currentSortKey == 'numPlayers' ? `sort-${model.currentSortDir}` : '' } ,
                     'Players'
+                ),
+                React.createElement(
+                    'th',
+                    { onMouseDown: () => model.sort('version'), className: model.currentSortKey == 'version' ? `sort-${model.currentSortDir}` : '' } ,
+                    'VERSION'
                 )
             )
         ),
@@ -466,6 +530,21 @@ var serverComparators = {
 
 function sortme() {
     model.currentServerList.sort(serverComparators[model.currentSortDir]);
+
+    let top = [];
+    let rest = [];
+    for(let i = 0; i < model.currentServerList.length; i++) {
+        let server = model.currentServerList[i];
+
+        if(server.pinned) {
+            top.push(server); 
+        } else {
+            rest.push(server);
+        }
+    }
+
+    model.currentServerList = top.concat(rest);
+
     render();
 }
 
@@ -519,6 +598,9 @@ function render() {
 }
 
 function sanitize(str) {
+    if(!str)
+        return 'Blam!';
+
     if(str.length > 80)
         str = str.substr(0, 80) + '...';
 
@@ -566,7 +648,8 @@ function getServerView() {
         return [];
     playlistFilter = playlistFilters[model.currentPlaylist];
     return model.currentServerList.filter(a => playlistFilter(a)
-        && (a.name + a.map + a.variant + a.variantType).toLowerCase().indexOf(model.currentFilter) != -1);
+        && (a.name + a.map + a.variant + a.variantType).toLowerCase().indexOf(model.currentFilter) != -1
+        && (a.version == model.gameVersion));
 }
 
 function quickJoin() {
@@ -600,8 +683,27 @@ function quickJoin() {
 swal.setDefaults({
     target: ".page_content",
     customClass: "alertWindow",
+    buttonsStyling: false,
     confirmButtonClass: "alertButton alertConfirm",
     cancelButtonClass: "alertButton alertCancel",
-    confirmButtonText: "<img src='dew://assets/buttons/XboxOne_A.png'>Ok",
+    confirmButtonText: "<img src='dew://assets/buttons/XboxOne_A.png'>OK",
     cancelButtonText: "<img src='dew://assets/buttons/XboxOne_B.png'>Cancel"
 })
+
+function parseVersion(str) { 
+    var result = 0;
+    var suffixPos = str.indexOf('-');
+    if(suffixPos != -1)
+        str = str.substr(0, suffixPos);
+    
+    var parts = str.split('.');
+    for(var i = 0; i < parts.length && i < 4; i++) {
+        result |= (parseInt(parts[i]) << (24-(i*8)));
+    }  
+    return result;
+}
+
+
+function reflect(p) {
+	return p.then(v => ({v, success: true }),  e => ({e, success: false }));
+}
