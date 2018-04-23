@@ -463,6 +463,9 @@ function render() {
 }
 
 function sanitize(str) {
+    if(str.length > 80)
+        str = str.substr(0, 80) + '...';
+
     var div = document.createElement('div');
     div.appendChild(document.createTextNode(str));
     return div.innerHTML;
