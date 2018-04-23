@@ -2,6 +2,7 @@ const masterServers = [
     "http://158.69.166.144:8080/list",
     "http://eldewrito.red-m.net/list"
 ];
+const playlists = ['all', 'social','ranked','customs','private','forge'];
 
 let pingQueue = [];
 let pingCounter= 0;
@@ -11,6 +12,7 @@ let model = {
     currentSortDir: 'desc',
     currentServerList: [],
     currentFilter: '',
+    currentPlaylist: 'social',
     playerCount: 0,
     serverCount: 0
 };
@@ -20,6 +22,7 @@ let inflightRequests = [];
 let refreshing = false;
 let visible = false;
 let serverPingInterval = null;
+let quickJoinIgnore = {};
 
 
 let serverListWidget = dew.makeListWidget(document.querySelector('#server-list-wrap'), {
@@ -34,31 +37,34 @@ serverListWidget.on('select', function(e) {
     let server = e.element.dataset.ip;
     if(!server)
         return;
-    
+
     e.preventSound();
-    if(e.element.dataset.type == "private") {
-        swal({   
-            title: "Private Server", 
-            input: "password",
-            inputPlaceholder: "Please enter password",
-            showCancelButton: true,
-            preConfirm: function (inputValue) {
-                return new Promise(function (resolve, reject) {  
-                    if (inputValue === "") {     
-                        swal.showValidationError("Passwords are never blank");     
-                    } else {
-                        dew.command('Server.connect '+ server + ' ' + inputValue, function() {
-                            swal.close();
-                        }).catch(function (error) {
-                            swal.showValidationError(error.message);
-                        });
-                    }
-                    $('.swal2-actions button').removeAttr('disabled');
-                })
-            }
-        });
-    }else{
-        dew.command(`Server.connect ${server}`);
+    
+    if(!$('body').hasClass('swal2-shown')){
+        if(e.element.dataset.type == "private") {
+            swal({   
+                title: "Private Server", 
+                input: "password",
+                inputPlaceholder: "Please enter password",
+                showCancelButton: true,
+                preConfirm: function (inputValue) {
+                    return new Promise(function (resolve, reject) {  
+                        if (inputValue === "") {     
+                            swal.showValidationError("Passwords are never blank");     
+                        } else {
+                            dew.command('Server.connect '+ server + ' ' + inputValue, function() {
+                                swal.close();
+                            }).catch(function (error) {
+                                swal.showValidationError(error.message);
+                            });
+                        }
+                        $('.swal2-actions button').removeAttr('disabled');
+                    })
+                }
+            });
+        }else{
+            dew.command(`Server.connect ${server}`);
+        }
     }
 });
 
@@ -84,6 +90,7 @@ dew.on('show', function() {
        // }
     });
     refresh();
+    selectPlaylist(playlists[0]);
 });
 
 dew.on('hide', function() {
@@ -106,8 +113,23 @@ dew.on("serverconnect", function (event) {
     }
 });
 
+function navigatePlaylists(dir) {
+    let currentIndex = playlists.indexOf(model.currentPlaylist);
+    if(currentIndex === -1)
+        return;
+
+    currentIndex += dir;
+    if(currentIndex >= playlists.length)
+        currentIndex = playlists.length-1;
+    else if(currentIndex < 0)
+        currentIndex = 0;
+
+    selectPlaylist(playlists[currentIndex]);
+}
 
 dew.ui.on('action', function({inputType, action}) {
+    if(document.activeElement && document.activeElement.nodeName === 'INPUT')
+        return;
     switch(action) {
         case dew.ui.Actions.X:
         if(inputType !== 'keyboard') {
@@ -115,7 +137,23 @@ dew.ui.on('action', function({inputType, action}) {
         }         
         break;
         case dew.ui.Actions.B:
-            closeBrowser();
+            if(!$('body').hasClass('swal2-shown')){
+                closeBrowser();
+            }else{
+                swal.close();
+            }
+            dew.ui.playSound(dew.ui.Sounds.B);
+        break;
+        case dew.ui.Actions.Y:
+            quickJoin();
+        break;
+        case dew.ui.Actions.LeftBumper:
+            navigatePlaylists(-1);
+            dew.ui.playSound(dew.ui.Sounds.LeftBumper);
+            break;
+        case dew.ui.Actions.RightBumper:
+            navigatePlaylists(1);  
+            dew.ui.playSound(dew.ui.Sounds.RightBumper);     
         break;
     }  
 });
@@ -131,6 +169,11 @@ function handleUserRefresh() {
 
 function closeBrowser() {
     dew.hide();
+}
+
+function handleUserCloseBrowser() {
+    dew.ui.playSound(dew.ui.Sounds.B);
+    closeBrowser();
 }
 
 function cancelRefresh() {
@@ -151,6 +194,7 @@ function refresh() {
     model.playerCount = 0;
     model.serverCount = 0;
     officialServers = {};
+    quickJoinIgnore = {};
   
     onRefreshStarted();
     render();
@@ -244,7 +288,7 @@ function ping(info) {
             let officialStatus = officialServers[info.server];
 
             resolve({
-                type: data.passworded ? 'private' : (officialStatus ? 'Official' : ''),
+                type: data.passworded ? 'private' : (officialStatus ? (officialStatus.ranked ? 'ranked' : 'social') : ''),
                 ping: ping,
                 IP: info.server,
                 hostPlayer: data.hostPlayer,
@@ -270,11 +314,6 @@ function ServerRow(server, connectCallback) {
     return React.createElement(
         'tr',
         { key: server.IP, 'data-ip': server.IP,  'data-type': server.type},
-        React.createElement(
-            'td',
-            null,
-            server.type
-        ),
         React.createElement(
             'td',
             null,
@@ -323,11 +362,6 @@ function ServerList(model, connectCallback) {
             React.createElement(
                 'tr',
                 null,
-                React.createElement(
-                    'th',
-                    { onMouseDown: () => model.sort('type'), className: model.currentSortKey == 'type' ? `sort-${model.currentSortDir}` : '' },
-                    'type'
-                ),
                 React.createElement(
                     'th',
                     { onMouseDown: () => model.sort('name'), className: model.currentSortKey == 'name' ? `sort-${model.currentSortDir}` : '' },
@@ -452,8 +486,30 @@ function onSearch(query) {
     render();
 }
 
+
+let playlistFilters = {
+    all: function(server) {
+        return server.type !== 'private';
+    },
+    social: function(server) {
+        return server.type === 'social';
+    },
+    ranked: function(server) {
+        return server.type === 'ranked';
+    },
+    customs: function(server) {
+        return server.type !== 'ranked' && server.type !== 'social' && server.type !== 'private';
+    },
+    private: function(server) {
+        return server.type === 'private';
+    },
+    forge: function(server) {
+        return server.type !== 'ranked' && server.type !== 'social' && server.type !== 'private' && server.variantType === 'forge';
+    }
+}
+
 function render() {
-    let list = model.currentServerList.filter(a => a.name.toLowerCase().indexOf(model.currentFilter) != -1);
+    let list = getServerView();
     ReactDOM.render(
         React.createElement(ServerList, { serverList: list, sort: onSort, search: onSearch, currentSortKey: model.currentSortKey, currentSortDir: model.currentSortDir }, null),
         document.getElementById('server-list-wrap')
@@ -471,11 +527,81 @@ function sanitize(str) {
     return div.innerHTML;
 }
 
+window.addEventListener("hashchange", function(e) {
+    let hash = window.location.hash;
+    if(hash.length < 2)
+        return;
+    
+    selectPlaylist(hash.substr(1));
+    e.preventDefault();
+    e.stopPropagation();
+    return false;
+});
+
+
+function selectPlaylist(playlist) {
+    let tabs = document.querySelectorAll('#playlistTabs li>a');
+    let tabLinkElements = {};
+    for(let tab of tabs)
+    {
+        let href = tab.getAttribute('href');
+        if(!href || href.length < 2)
+            continue;
+
+        tabLinkElements[href.substr(1)] = tab;
+    }
+
+    let currentTab = tabLinkElements[model.currentPlaylist];
+    if(currentTab)
+        currentTab.classList.remove('active');
+
+    currentTab = tabLinkElements[playlist];
+    currentTab.classList.add('active');
+    model.currentPlaylist = playlist;
+    render();
+}
+
+function getServerView() {
+    if (!model.currentServerList.length)
+        return [];
+    playlistFilter = playlistFilters[model.currentPlaylist];
+    return model.currentServerList.filter(a => playlistFilter(a)
+        && (a.name + a.map + a.variant + a.variantType).toLowerCase().indexOf(model.currentFilter) != -1);
+}
+
+function quickJoin() {
+    let list = getServerView()
+    .filter(a => a.numPlayers < 16 && !quickJoinIgnore[a.IP])
+    list.sort((a, b) => a.ping - b.ping);
+
+    let maxScore = -1;
+    let chosenServer = null;
+    for(let server of list) {
+        let score = 1.0 - (server.ping / 3000.0) * 2.0 + server.numPlayers;
+        if(score > maxScore) {
+            maxScore = score;
+            chosenServer = server;
+        }
+    }
+
+    if(!chosenServer)
+        return;
+      
+    quickJoinIgnore[chosenServer.IP] = true;
+    dew.command(`Server.connect ${chosenServer.IP}`)
+        .catch(err => {
+            swal({
+                title: "Failed to join",
+                text: err.message
+            });
+        });
+}
+
 swal.setDefaults({
     target: ".page_content",
     customClass: "alertWindow",
     confirmButtonClass: "alertButton alertConfirm",
     cancelButtonClass: "alertButton alertCancel",
-    confirmButtonText: "<img class='button'>Ok",
-    cancelButtonText: "<img class='button'>Cancel"
+    confirmButtonText: "<img src='dew://assets/buttons/XboxOne_A.png'>Ok",
+    cancelButtonText: "<img src='dew://assets/buttons/XboxOne_B.png'>Cancel"
 })

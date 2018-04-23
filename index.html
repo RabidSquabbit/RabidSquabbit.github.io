@@ -18,8 +18,6 @@
 <body>
     <div id="container">
         <div class="page_content container">
-
-
             <div class="server-list-header">
                 <p id="menuTitle">Server Browser</p>
                 <div></div>
@@ -28,12 +26,25 @@
                     <input id="server-list-filter" type="text" placeholder="search...">
                     <button id="refresh">Refresh</button>
                 </div>
-            </div>
+                <div class="playlist-tabs">
+                    <ul id="playlistTabs">
+                        <li><a href="#all">All</a></li>
+                        <li><a href="#social">Social</a></li>
+                        <li><a href="#ranked">Ranked</a></li>
+                        <li><a href="#customs">Customs</a></li>
+                        <li><a href="#private">Private</a></li>
+                        <li><a href="#forge">Forge</a></li>
+                    </ul>
+                </div>
+            </div> 
             <div class="page_footer gamepad-only">
                     <p><img src="dew://assets/buttons/XboxOne_A.png">Join Server</p>
                     <p><img src="dew://assets/buttons/XboxOne_X.png"><a onclick="handleUserRefresh()" id="refreshLegendLink">Refresh List</a></p>
-                    <p><img src="dew://assets/buttons/XboxOne_B.png"><a onclick="closeBrowser()">Close</a></p>
+                    <p><img src="dew://assets/buttons/XboxOne_Y.png"><a onclick="quickJoin()">Quick Join</a></p>
+                    <p><img src="dew://assets/buttons/XboxOne_B.png"><a onclick="handleUserCloseBrowser()">Close</a></p>
+                   
             </div>
+            <p>Official Server List unreachable</p>
             <div id="server-list-wrap"></div>
 
         </div>

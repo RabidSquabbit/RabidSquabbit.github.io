@@ -61,7 +61,6 @@ dew.ui = (function () {
             var tagIndex = getUiSoundTagIndex(index);
             if (tagIndex == -1)
                 return;
-                console.log(new Error().stack);
             dew.command('Game.PlaySound 0x' + tagIndex.toString(16));
         },
 
@@ -121,6 +120,8 @@ dew.ui = (function () {
         if (_keyStates[33]) _keyTicks[UiAction.LeftTrigger]++; else _keyTicks[UiAction.LeftTrigger] = 0;
         if (_keyStates[34]) _keyTicks[UiAction.RightTrigger]++; else _keyTicks[UiAction.RightTrigger] = 0;
         if (_keyStates[46]) _keyTicks[UiAction.Y]++; else _keyTicks[UiAction.Y] = 0;
+        if (_keyStates[81]) _keyTicks[UiAction.LeftBumper]++; else _keyTicks[UiAction.LeftBumper] = 0;
+        if (_keyStates[69]) _keyTicks[UiAction.RightBumper]++; else _keyTicks[UiAction.RightBumper] = 0;
 
         if (_stickTicks.right > 255) _stickTicks.right = 255;
         if (_stickTicks.left > 255) _stickTicks.left = 255;
@@ -190,6 +191,8 @@ dew.ui = (function () {
         if (controller.B == 1) emit('action', { inputType: 'controller', action: UiAction.B });
         if (controller.X == 1) emit('action', { inputType: 'controller', action: UiAction.X });
         if (controller.Y == 1) emit('action', { inputType: 'controller', action: UiAction.Y });
+        if (controller.LeftBumper == 1) emit('action', { inputType: 'controller', action: UiAction.LeftBumper });
+        if (controller.RightBumper == 1) emit('action', { inputType: 'controller', action: UiAction.RightBumper });
 
         for (var i = 0; i < 16; i++) {
             if (_keyTicks[i] == 1) {
