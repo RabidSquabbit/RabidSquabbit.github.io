@@ -37,7 +37,8 @@ p#menuTitle {
     padding-right: var(--side-margin);
 }
 /*Search*/
-input#server-list-filter {
+input#server-list-filter,
+input#max-ping-filter {
     background-color: rgba(0, 0, 0, 0.34);
     outline: none;
     border: none;
@@ -49,7 +50,8 @@ input#server-list-filter {
     margin-right: 32px;
     color: white;
 }
-input#server-list-filter:focus{
+input#server-list-filter:focus,
+input#max-ping-filter:focus {
     color: white;
 }
 div#serverSearch {

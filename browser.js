@@ -14,7 +14,8 @@ let model = {
     currentFilter: '',
     currentPlaylist: 'social',
     playerCount: 0,
-    serverCount: 0
+    serverCount: 0,
+    maxPing: 100
 };
 let officialServers = {};
 let refreshVersion = 0;
@@ -419,6 +420,17 @@ listFilterTextbox.addEventListener('blur', function() {
     serverListWidget.focus();
 })
 
+let maxPingInput = document.getElementById('max-ping-filter');
+maxPingInput.addEventListener('input', function(e) {
+    onMaxPingUpdate(e.target.value);
+});
+maxPingInput.addEventListener('focus', function() {
+    serverListWidget.blur();
+});
+maxPingInput.addEventListener('blur', function() {
+    serverListWidget.focus();
+})
+
 document.getElementById('refresh').addEventListener('click', function() {
     if(!refreshing)
         refresh();
@@ -482,6 +494,12 @@ function onSort(key) {
 
 function onSearch(query) {
     model.currentFilter = query.toLowerCase();
+    sortme();
+    render();
+}
+
+function onMaxPingUpdate(maxPing) {
+    model.maxPing = parseInt(maxPing);
     sortme();
     render();
 }
@@ -569,7 +587,8 @@ function getServerView() {
         return [];
     playlistFilter = playlistFilters[model.currentPlaylist];
     return model.currentServerList.filter(a => playlistFilter(a)
-        && (a.name + a.map + a.variant + a.variantType).toLowerCase().indexOf(model.currentFilter) != -1);
+        && (a.name + a.map + a.variant + a.variantType).toLowerCase().indexOf(model.currentFilter) != -1
+        && a.ping <= model.maxPing);
 }
 
 function quickJoin() {
