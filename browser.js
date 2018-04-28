@@ -588,7 +588,7 @@ function getServerView() {
     playlistFilter = playlistFilters[model.currentPlaylist];
     return model.currentServerList.filter(a => playlistFilter(a)
         && (a.name + a.map + a.variant + a.variantType).toLowerCase().indexOf(model.currentFilter) != -1
-        && a.ping <= model.maxPing || model.maxPing === 0);
+        && (a.ping <= model.maxPing || model.maxPing === 0));
 }
 
 function quickJoin() {
