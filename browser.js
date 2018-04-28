@@ -15,7 +15,7 @@ let model = {
     currentPlaylist: 'social',
     playerCount: 0,
     serverCount: 0,
-    maxPing: 100
+    maxPing: 0
 };
 let officialServers = {};
 let refreshVersion = 0;
@@ -499,7 +499,7 @@ function onSearch(query) {
 }
 
 function onMaxPingUpdate(maxPing) {
-    model.maxPing = parseInt(maxPing);
+    model.maxPing = maxPing === '' ? 0 : parseInt(maxPing);
     sortme();
     render();
 }
@@ -588,7 +588,7 @@ function getServerView() {
     playlistFilter = playlistFilters[model.currentPlaylist];
     return model.currentServerList.filter(a => playlistFilter(a)
         && (a.name + a.map + a.variant + a.variantType).toLowerCase().indexOf(model.currentFilter) != -1
-        && a.ping <= model.maxPing);
+        && a.ping <= model.maxPing || model.maxPing === 0);
 }
 
 function quickJoin() {
