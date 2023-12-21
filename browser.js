@@ -1,7 +1,7 @@
 const masterServers = [
+    "http://ed.thebeerkeg.net/server/list",
     "http://eldewrito.red-m.net/list",
-    "http://158.69.166.144:8080/list",
-    "http://83.84.157.154:3000/list"
+    "http://eldewrito.pauwlo.fr:7000/master"
 ];
 
 const playlists = ['all', 'social','ranked','customs','private','forge'];
